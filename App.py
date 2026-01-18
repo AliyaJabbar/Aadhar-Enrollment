@@ -24,13 +24,20 @@ st.title("🎯 Aadhaar Enrollment Gap Analysis Dashboard")
 st.markdown("### AI-Powered Priority District Identification System")
 st.markdown("---")
 
-# Load data
+# Load data 
 @st.cache_data
 def load_data():
-    df = pd.read_csv("cleaned_data.csv")
+    # Reading parquet instead of CSV
+    df = pd.read_parquet("cleaned_data.parquet")
+    
+    # Ensure date is datetime format
     df["date"] = pd.to_datetime(df["date"])
+    
+    # District summary remains CSV (it's usually small)
     district_df = pd.read_csv("district_priority.csv")
+    
     return df, district_df
+
 
 try:
     df_clean, district_summary = load_data()
