@@ -26,7 +26,7 @@ st.markdown("""
 def load_and_clean_data():
     # 1. Load your exported files
     try:
-        df = pd.read_csv("cleaned_data.csv")
+        df = pd.read_csv("cleaned_data.parquet")
         district_df = pd.read_csv("district_priority.csv")
     except Exception as e:
         st.error(f"⚠️ Files missing! Ensure 'cleaned_data.csv' and 'district_priority.csv' are in your repository.")
