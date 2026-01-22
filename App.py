@@ -11,12 +11,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- PROFESSIONAL UI STYLING ---
+# --- PROFESSIONAL VIOLET UI STYLING ---
 st.markdown("""
     <style>
     .main { background-color: #fcfcfc; }
     
-    /* Updated Insight Box: Light Violet Theme */
+    /* Insight Box: Light Violet Theme */
     .insight-box { 
         background-color: #f3e5f5; 
         padding: 20px; 
@@ -41,16 +41,22 @@ st.markdown("""
 # --- DATA ENGINE ---
 @st.cache_data
 def load_and_clean_data():
-    # Loading logic (Replace with your actual paths)
+    # Attempt to load data
     try:
         df = pd.read_parquet("cleaned_data.parquet")
     except:
-        df = pd.DataFrame() 
+        # Fallback empty dataframe with expected columns for safety
+        df = pd.DataFrame(columns=['state', 'district', 'date', 'total_enrollment', 'children_enrollment', 'age_0_5', 'age_5_17', 'age_18_greater', 'pincode'])
     
     try:
         district_df = pd.read_csv("district_priority.csv")
     except:
         district_df = pd.DataFrame()
+
+    # Normalize column names to avoid KeyErrors
+    df.columns = [c.lower() for c in df.columns]
+    if not district_df.empty:
+        district_df.columns = [c.lower() for c in district_df.columns]
 
     ALL_VALID = [
         'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
@@ -70,168 +76,176 @@ def load_and_clean_data():
     df = df[df['state'].isin(ALL_VALID)]
     df['state_for_map'] = df['state'].replace(geojson_map)
     
-    if not district_df.empty:
-        district_df = district_df[district_df['State'].isin(ALL_VALID)]
-        district_df['State_Map'] = district_df['State'].replace(geojson_map)
-
     df["date"] = pd.to_datetime(df["date"])
-    df['month_num'] = df['date'].dt.month
-    df['month_name'] = df['date'].dt.month_name().str[:3]
-
+    
     return df, district_df
 
 df_clean, district_summary = load_and_clean_data()
 
-# --- SIDEBAR: FILTERS & NAVIGATION ---
+# --- SIDEBAR: NAVIGATION & DYNAMIC FILTERS ---
 with st.sidebar:
-    st.title("📌 Dashboard Controls")
+    st.title("📌 Dashboard Menu")
     menu = st.radio("Switch View:", 
         ["📋 Executive Summary", "🗺️ National Heatmap", "🚨 Priority Districts", "📈 Enrollment Trends", "💫 Performance Matrix"])
     
     st.markdown("---")
-    st.subheader("Interactive Filters")
+    st.subheader("Global Filters")
 
     # 1. Date Range Filter
-    min_date = df_clean['date'].min().date()
-    max_date = df_clean['date'].max().date()
-    selected_dates = st.date_input("Date Range", [min_date, max_date])
-
-    # 2. State Filter with Select All
+    if not df_clean.empty:
+        min_date = df_clean['date'].min().date()
+        max_date = df_clean['date'].max().date()
+        selected_date_range = st.date_input("Select Date Range", [min_date, max_date])
+    
+    # 2. State Filter (Select All Logic)
     all_states = sorted(df_clean['state'].unique())
     select_all_states = st.checkbox("Select All States", value=True)
+    
     if select_all_states:
         selected_states = all_states
     else:
-        selected_states = st.multiselect("Select Specific States", all_states)
+        selected_states = st.multiselect("Pick States", all_states)
 
-    # 3. District Filter (Conditional)
-    relevant_districts = sorted(df_clean[df_clean['state'].isin(selected_states)]['District'].unique())
+    # 3. District Filter (Cascading Logic to prevent KeyError)
+    # Using .get() or lowercase check to ensure 'district' column is found
+    dist_col = 'district' if 'district' in df_clean.columns else 'District'
+    
+    relevant_districts = sorted(df_clean[df_clean['state'].isin(selected_states)][dist_col].unique())
     select_all_districts = st.checkbox("Select All Districts", value=True)
+    
     if select_all_districts:
         selected_districts = relevant_districts
     else:
-        selected_districts = st.multiselect("Select Specific Districts", relevant_districts)
+        selected_districts = st.multiselect("Pick Districts", relevant_districts)
 
     st.markdown("---")
     st.markdown("Created by: **Aliya Jabbar**")
 
-# --- APPLY FILTERS TO DATA ---
-if len(selected_dates) == 2:
-    start_date, end_date = pd.to_datetime(selected_dates[0]), pd.to_datetime(selected_dates[1])
+# --- APPLY GLOBAL FILTERS ---
+if len(selected_date_range) == 2:
+    start_dt, end_dt = pd.to_datetime(selected_date_range[0]), pd.to_datetime(selected_date_range[1])
+    
     mask = (
         (df_clean['state'].isin(selected_states)) & 
-        (df_clean['District'].isin(selected_districts)) &
-        (df_clean['date'] >= start_date) & 
-        (df_clean['date'] <= end_date)
+        (df_clean[dist_col].isin(selected_districts)) &
+        (df_clean['date'] >= start_dt) & 
+        (df_clean['date'] <= end_dt)
     )
     df_final = df_clean.loc[mask]
     
-    # Filter district summary based on state/district selection
-    dist_final = district_summary[
-        (district_summary['State'].isin(selected_states)) & 
-        (district_summary['District'].isin(selected_districts))
-    ]
+    # Filter district summary (using lowercase 'state' and 'district' as normalized above)
+    if not district_summary.empty:
+        dist_final = district_summary[
+            (district_summary['state'].isin(selected_states)) & 
+            (district_summary['district'].isin(selected_districts))
+        ]
+    else:
+        dist_final = pd.DataFrame()
 else:
-    df_final = df_clean.copy()
-    dist_final = district_summary.copy()
+    df_final = df_clean
+    dist_final = district_summary
 
-# --- HEADER ---
+# --- MAIN DASHBOARD INTERFACE ---
 st.title("Aadhaar Enrollment Gap Analysis")
-st.caption(f"Strategic Intelligence Dashboard | View: {menu} | Data Refresh 2026")
+st.caption(f"Intelligence Report | 2026 | Filters Applied: {len(selected_states)} States")
 
-# --- 📋 SECTION 1: EXECUTIVE SUMMARY ---
-if menu == "📋 Executive Summary":
-    m1, m2, m3, m4 = st.columns(4)
-    total_e = df_final['total_enrollment'].sum()
-    child_e = df_final['children_enrollment'].sum()
-    
-    m1.metric("Total Enrollments", f"{total_e:,}")
-    m2.metric("Child Enrollment", f"{child_e:,}", f"{(child_e/total_e*100 if total_e > 0 else 0):.1f}%")
-    m3.metric("Pincodes Covered", f"{df_final['pincode'].nunique():,}")
-    m4.metric("Active States", f"{df_final['state'].nunique():,}")
+if df_final.empty:
+    st.warning("No data matches the selected filters. Please adjust the sidebar settings.")
+else:
+    # --- SECTION 1: EXECUTIVE SUMMARY ---
+    if menu == "📋 Executive Summary":
+        m1, m2, m3, m4 = st.columns(4)
+        total_v = df_final['total_enrollment'].sum()
+        child_v = df_final['children_enrollment'].sum()
+        
+        m1.metric("Total Enrollments", f"{total_v:,}")
+        m2.metric("Child Enrollment", f"{child_v:,}", f"{(child_v/total_v*100 if total_v>0 else 0):.1f}%")
+        m3.metric("Pincodes Covered", f"{df_final['pincode'].nunique():,}")
+        m4.metric("Active Regions", f"{df_final['state'].nunique():,}")
 
-    st.markdown("---")
-    c1, c2 = st.columns(2)
-    with c1:
-        age_totals = {
-            'Age 0-5': df_final['age_0_5'].sum(), 
-            'Age 5-17': df_final['age_5_17'].sum(), 
-            'Age 18+': df_final['age_18_greater'].sum()
-        }
-        # Multi-color Pie Chart
-        fig3 = px.pie(
-            names=list(age_totals.keys()), 
-            values=list(age_totals.values()),
-            hole=0.4,
-            color_discrete_sequence=px.colors.qualitative.Prism
+        st.markdown("---")
+        c1, c2 = st.columns(2)
+        with c1:
+            # Multi-color Pie Chart
+            age_map = {
+                'Age 0-5': df_final['age_0_5'].sum(), 
+                'Age 5-17': df_final['age_5_17'].sum(), 
+                'Age 18+': df_final['age_18_greater'].sum()
+            }
+            fig_pie = px.pie(
+                names=list(age_map.keys()), 
+                values=list(age_map.values()),
+                hole=0.4,
+                color_discrete_sequence=px.colors.qualitative.Pastel # Professional Multi-color
+            )
+            fig_pie.update_layout(title="Enrollment by Demographic")
+            st.plotly_chart(fig_pie, use_container_width=True)
+            st.markdown('<div class="insight-box">Demographic Insight: Children and teenagers represent the largest volume of new registrations in the filtered dataset.</div>', unsafe_allow_html=True)
+
+        with c2:
+            top_states = df_final.groupby('state')['children_enrollment'].sum().nlargest(10).reset_index()
+            fig_bar = px.bar(top_states, x='children_enrollment', y='state', orientation='h',
+                             title="Leading States (Child Enrollment)", color='children_enrollment', 
+                             color_continuous_scale='Purples') # Violet theme bar
+            st.plotly_chart(fig_bar, use_container_width=True)
+            st.markdown('<div class="insight-box">Operational Focus: Top states indicate high demand; resources should be scaled to match these volumes.</div>', unsafe_allow_html=True)
+
+    # --- SECTION 2: NATIONAL HEATMAP ---
+    elif menu == "🗺️ National Heatmap":
+        st.header("National Enrollment Density")
+        map_df = df_final.groupby('state_for_map')['children_enrollment'].sum().reset_index()
+        
+        fig_map = px.choropleth(
+            map_df,
+            geojson="https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson",
+            featureidkey='properties.ST_NM',
+            locations='state_for_map',
+            color='children_enrollment',
+            color_continuous_scale='RdYlGn', 
+            title="State-wise Saturation Gap"
         )
-        fig3.update_layout(title="Demographic Enrollment Share")
-        st.plotly_chart(fig3, use_container_width=True)
-        st.markdown('<div class="insight-box">Strategic Observation: The demographic trend confirms that children (0-17) constitute the primary growth segment for new Aadhaar generation.</div>', unsafe_allow_html=True)
+        fig_map.update_geos(fitbounds="locations", visible=False)
+        fig_map.update_layout(height=700)
+        st.plotly_chart(fig_map, use_container_width=True)
+        st.markdown('<div class="insight-box">Geospatial Analysis: Red zones indicate areas where enrollment density is low relative to child population.</div>', unsafe_allow_html=True)
 
-    with c2:
-        top_s = df_final.groupby('state')['children_enrollment'].sum().nlargest(10).reset_index()
-        fig1 = px.bar(top_s, x='children_enrollment', y='state', orientation='h',
-                      title="Top States (Child Enrollment)", color='children_enrollment', color_continuous_scale='Purples')
-        st.plotly_chart(fig1, use_container_width=True)
-        st.markdown('<div class="insight-box">Operational Insight: Higher population states continue to lead in volume, necessitating sustained infrastructure in these regions.</div>', unsafe_allow_html=True)
+    # --- SECTION 3: PRIORITY DISTRICTS ---
+    elif menu == "🚨 Priority Districts":
+        st.header("Action Zones (High Gap)")
+        if not dist_final.empty:
+            p_top = dist_final.sort_values('priority_score', ascending=False).head(20)
+            p_top['label'] = p_top['district'] + " (" + p_top['state'] + ")"
+            
+            fig_p = px.bar(p_top, x='priority_score', y='label', orientation='h',
+                          color='priority_score', color_continuous_scale='Reds')
+            fig_p.update_layout(height=700, yaxis={'categoryorder':'total ascending'})
+            st.plotly_chart(fig_p, use_container_width=True)
+            st.markdown('<div class="insight-box">Priority Alert: These districts require immediate intervention to bridge the enrollment gap.</div>', unsafe_allow_html=True)
+        else:
+            st.info("No priority data available for the current selection.")
 
-# --- 🗺️ SECTION 2: NATIONAL HEATMAP ---
-elif menu == "🗺️ National Heatmap":
-    st.header("Geographic Enrollment Density")
-    state_map_data = df_final.groupby('state_for_map')['children_enrollment'].sum().reset_index()
-    
-    fig4 = px.choropleth(
-        state_map_data,
-        geojson="https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson",
-        featureidkey='properties.ST_NM',
-        locations='state_for_map',
-        color='children_enrollment',
-        color_continuous_scale='RdYlGn', 
-        title="India State-wise Distribution"
-    )
-    fig4.update_geos(fitbounds="locations", visible=False)
-    fig4.update_layout(height=700)
-    st.plotly_chart(fig4, use_container_width=True)
-    st.markdown('<div class="insight-box">Geospatial Analysis: Areas highlighted in red indicate high-gap zones where enrollment center density is insufficient compared to the population.</div>', unsafe_allow_html=True)
+    # --- SECTION 4: ENROLLMENT TRENDS ---
+    elif menu == "📈 Enrollment Trends":
+        st.header("Registration Timeline")
+        # Ensure 'date' is used for the trend
+        trend = df_final.groupby('date').agg({'age_0_5':'sum', 'age_5_17':'sum'}).reset_index()
+        
+        fig_trend = go.Figure()
+        fig_trend.add_trace(go.Scatter(x=trend['date'], y=trend['age_0_5'], name='Age 0-5', line=dict(color='#7b1fa2', width=3)))
+        fig_trend.add_trace(go.Scatter(x=trend['date'], y=trend['age_5_17'], name='Age 5-17', line=dict(color='#ce93d8', width=3)))
+        fig_trend.update_layout(title="Daily Enrollment Trends (Filtered Range)", hovermode='x unified')
+        st.plotly_chart(fig_trend, use_container_width=True)
+        st.markdown('<div class="insight-box">Timeline Note: Spikes often align with regional school admission cycles.</div>', unsafe_allow_html=True)
 
-# --- 🚨 SECTION 3: PRIORITY DISTRICTS ---
-elif menu == "🚨 Priority Districts":
-    st.header("Priority Action Zones")
-    priority_top = dist_final.sort_values('PRIORITY_SCORE', ascending=False).head(20)
-    priority_top['label'] = priority_top['District'] + ", " + priority_top['State']
-    
-    fig5 = px.bar(priority_top, x='PRIORITY_SCORE', y='label', orientation='h',
-                  color='PRIORITY_SCORE', color_continuous_scale='Reds')
-    fig5.update_layout(height=700, yaxis={'categoryorder':'total ascending'})
-    st.plotly_chart(fig5, use_container_width=True)
-    st.markdown('<div class="insight-box">Immediate Action Required: The districts listed above exhibit the highest priority scores due to low saturation and limited service points.</div>', unsafe_allow_html=True)
-
-# --- 📈 SECTION 4: ENROLLMENT TRENDS ---
-elif menu == "📈 Enrollment Trends":
-    st.header("Temporal Enrollment Analysis")
-    # Group by date for more granular time filtering
-    trend_data = df_final.groupby('date').agg({'age_0_5':'sum', 'age_5_17':'sum'}).reset_index()
-    
-    fig2 = go.Figure()
-    fig2.add_trace(go.Scatter(x=trend_data['date'], y=trend_data['age_0_5'], name='Age 0-5', line=dict(color='#7b1fa2', width=3)))
-    fig2.add_trace(go.Scatter(x=trend_data['date'], y=trend_data['age_5_17'], name='Age 5-17', line=dict(color='#ab47bc', width=3)))
-    fig2.update_layout(title="Daily Enrollment Trends", hovermode='x unified')
-    st.plotly_chart(fig2, use_container_width=True)
-    st.markdown('<div class="insight-box">Temporal Analysis: Reviewing trends over the selected date range helps identify sudden spikes or drops in registration activity.</div>', unsafe_allow_html=True)
-
-# --- 💫 SECTION 5: PERFORMANCE MATRIX ---
-elif menu == "💫 Performance Matrix":
-    st.header("District Efficiency Matrix")
-    # Using filtered data for the scatter plot
-    fig6 = px.scatter(dist_final, x='Pincodes', y='Children', size='Total', color='PRIORITY_SCORE',
-                      hover_name='District', 
-                      color_continuous_scale='RdYlGn_r', 
-                      size_max=40,
-                      title="Enrollment Volume vs. Pincode Coverage")
-    st.plotly_chart(fig6, use_container_width=True)
-    st.markdown('<div class="insight-box">Performance Evaluation: High-priority clusters (Red) represent critical infrastructure gaps, whereas Green clusters indicate healthy saturation.</div>', unsafe_allow_html=True)
+    # --- SECTION 5: PERFORMANCE MATRIX ---
+    elif menu == "💫 Performance Matrix":
+        st.header("District Saturation Analysis")
+        if not dist_final.empty:
+            fig_mat = px.scatter(dist_final, x='pincodes', y='children', size='total', color='priority_score',
+                              hover_name='district', color_continuous_scale='RdYlGn_r', size_max=40)
+            st.plotly_chart(fig_mat, use_container_width=True)
+            st.markdown('<div class="insight-box">Matrix View: Bottom-left (Red) points represent districts with low pincode coverage and low enrollment volume.</div>', unsafe_allow_html=True)
 
 # --- FOOTER ---
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #757575;'>Aadhaar Enrollment Gap Analysis | 2026 | Created by Aliya Jabbar</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #757575;'>Aadhaar Enrollment Analysis | 2026 | Created by Aliya Jabbar</p>", unsafe_allow_html=True)
