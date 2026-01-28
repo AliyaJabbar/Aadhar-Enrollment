@@ -7,10 +7,10 @@ import plotly.graph_objects as go
 st.set_page_config(
     page_title="Aadhaar Enrollment Gap Analysis Dashboard", 
     layout="wide", 
-    page_icon="",
+    page_icon="🎯",
     initial_sidebar_state="expanded"
 )
-CHART_FONT_SIZE = 16
+
 # --- PROFESSIONAL VIOLET UI STYLING ---
 st.markdown("""
     <style>
@@ -76,7 +76,7 @@ df_clean, district_summary = load_and_clean_data()
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title(" Dashboard Menu")
+    st.title("📌 Dashboard Menu")
     menu = st.radio("Switch View:", ["📋 Executive Summary", "🗺️ National Heatmap", "🚨 Priority Districts", "📈 Enrollment Trends", "💫 Performance Matrix"])
     st.markdown("---")
     st.subheader("Global Filters")
@@ -84,13 +84,16 @@ with st.sidebar:
         min_date = df_clean['date'].min().date()
         max_date = df_clean['date'].max().date()
         selected_date_range = st.date_input("Select Date Range", [min_date, max_date])
+    
     all_states = sorted(df_clean['state'].unique())
     select_all_states = st.checkbox("Select All States", value=True)
     selected_states = all_states if select_all_states else st.multiselect("Pick States", all_states)
+    
     dist_col = 'district' if 'district' in df_clean.columns else 'District'
     relevant_districts = sorted(df_clean[df_clean['state'].isin(selected_states)][dist_col].unique())
     select_all_districts = st.checkbox("Select All Districts", value=True)
     selected_districts = relevant_districts if select_all_districts else st.multiselect("Pick Districts", relevant_districts)
+    
     st.markdown("---")
     st.markdown("Created by: **Aliya Jabbar**")
 
@@ -122,19 +125,19 @@ else:
         m3.metric("Pincodes Covered", f"{df_final['pincode'].nunique():,}")
         m4.metric("Active Regions", f"{df_final['state'].nunique():,}")
         st.markdown("---")
+        
         c1, c2 = st.columns(2)
         with c1:
             age_map = {'Age 0-5': df_final['age_0_5'].sum(), 'Age 5-17': df_final['age_5_17'].sum(), 'Age 18+': df_final['age_18_greater'].sum()}
             fig_pie = px.pie(names=list(age_map.keys()), values=list(age_map.values()), hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
-            # UPDATED: Added Data Labels to Pie
             fig_pie.update_traces(textinfo='percent+label', textposition='inside', insidetextorientation='radial')
             fig_pie.update_layout(title="Enrollment by Demographic")
             st.plotly_chart(fig_pie, use_container_width=True)
             st.markdown('<div class="insight-box">Demographic Insight: Children and teenagers represent the largest volume of new registrations in the filtered dataset.</div>', unsafe_allow_html=True)     
+        
         with c2:
             top_states = df_final.groupby('state')['children_enrollment'].sum().nlargest(10).reset_index()
-            
-        fig_bar = px.bar(
+            fig_bar = px.bar(
                 top_states, 
                 x='children_enrollment', 
                 y='state', 
@@ -143,26 +146,21 @@ else:
                 color='children_enrollment', 
                 color_continuous_scale='Purples'
             )
-            
-            # --- UPDATED SECTION FOR FONT SIZE & READABILITY ---
             fig_bar.update_layout(
                 yaxis={
                     'categoryorder': 'total ascending',
-                    'tickfont': {'size': 18, 'color': 'black', 'family': 'Arial Black'} # Bold, large font for states
+                    'tickfont': {'size': 18, 'color': 'black', 'family': 'Arial Black'}
                 },
-                xaxis={
-                    'tickfont': {'size': 14, 'color': 'black'} # Larger numbers on bottom axis
-                },
-                margin=dict(l=150), # Adds extra space on the left so long state names fit perfectly
-                title_font={'size': 22} # Makes the chart title stand out in the video
+                xaxis={'tickfont': {'size': 14, 'color': 'black'}},
+                margin=dict(l=150),
+                title_font={'size': 22}
             )
-            
             st.plotly_chart(fig_bar, use_container_width=True)
             st.markdown('<div class="insight-box">Operational Focus: Top states indicate high demand; resources should be scaled to match these volumes.</div>', unsafe_allow_html=True)
+
     elif menu == "🗺️ National Heatmap":
         st.header("National Enrollment Density")
         map_df = df_final.groupby('state_for_map')['children_enrollment'].sum().reset_index()
-        # UPDATED: Readable labels in Black color on Map
         fig_map = px.choropleth(
             map_df,
             geojson="https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson",
@@ -172,10 +170,7 @@ else:
             color_continuous_scale='RdYlGn', 
             title="State-wise Saturation Gap"
         )
-        # Customizing the text appearance
-        fig_map.update_traces(
-            hovertemplate="<b>%{location}</b><br>Children Enrollment: %{z:,.0f}"
-        )
+        fig_map.update_traces(hovertemplate="<b>%{location}</b><br>Children Enrollment: %{z:,.0f}")
         fig_map.update_geos(fitbounds="locations", visible=False)
         fig_map.update_layout(height=700, font=dict(color="black", size=14))
         st.plotly_chart(fig_map, use_container_width=True)
@@ -187,9 +182,10 @@ else:
             p_top = dist_final.sort_values('priority_score', ascending=False).head(20)
             p_top['label'] = p_top['district'] + " (" + p_top['state'] + ")"
             fig_p = px.bar(p_top, x='priority_score', y='label', orientation='h', color='priority_score', color_continuous_scale='Reds')
-            fig_p.update_layout(height=700, yaxis={'categoryorder':'total ascending'})
+            fig_p.update_layout(height=700, yaxis={'categoryorder':'total ascending'}, font=dict(size=14))
             st.plotly_chart(fig_p, use_container_width=True)
-        else: st.info("No priority data available for the current selection.")
+        else: 
+            st.info("No priority data available for the current selection.")
 
     elif menu == "📈 Enrollment Trends":
         st.header("Registration Timeline")
