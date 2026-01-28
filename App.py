@@ -130,27 +130,16 @@ else:
         with c1:
             age_map = {'Age 0-5': df_final['age_0_5'].sum(), 'Age 5-17': df_final['age_5_17'].sum(), 'Age 18+': df_final['age_18_greater'].sum()}
             fig_pie = px.pie(names=list(age_map.keys()), values=list(age_map.values()), hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig_pie.update_traces(textinfo='percent+label', textposition='inside', insidetextorientation='radial')
+            fig_pie.update_traces(textinfo='percent+label', textposition='inside', insidetextorientation='radial', textfont=dict(size=14, color="black"))
             fig_pie.update_layout(title="Enrollment by Demographic")
             st.plotly_chart(fig_pie, use_container_width=True)
             st.markdown('<div class="insight-box">Demographic Insight: Children and teenagers represent the largest volume of new registrations in the filtered dataset.</div>', unsafe_allow_html=True)     
         
         with c2:
             top_states = df_final.groupby('state')['children_enrollment'].sum().nlargest(10).reset_index()
-            fig_bar = px.bar(
-                top_states, 
-                x='children_enrollment', 
-                y='state', 
-                orientation='h', 
-                title="Leading States (Child Enrollment)", 
-                color='children_enrollment', 
-                color_continuous_scale='Purples'
-            )
+            fig_bar = px.bar(top_states, x='children_enrollment', y='state', orientation='h', title="Leading States (Child Enrollment)", color='children_enrollment', color_continuous_scale='Purples')
             fig_bar.update_layout(
-                yaxis={
-                    'categoryorder': 'total ascending',
-                    'tickfont': {'size': 16, 'color': 'black', 'family': 'Arial Black'}
-                },
+                yaxis={'categoryorder': 'total ascending', 'tickfont': {'size': 18, 'color': 'black', 'family': 'Arial Black'}},
                 xaxis={'tickfont': {'size': 14, 'color': 'black'}},
                 margin=dict(l=150),
                 title_font={'size': 22}
@@ -172,7 +161,7 @@ else:
         )
         fig_map.update_traces(hovertemplate="<b>%{location}</b><br>Children Enrollment: %{z:,.0f}")
         fig_map.update_geos(fitbounds="locations", visible=False)
-        fig_map.update_layout(height=700, font=dict(color="black", size=14))
+        fig_map.update_layout(height=700, font=dict(color="black", size=16)) # Increased font size
         st.plotly_chart(fig_map, use_container_width=True)
         st.markdown('<div class="insight-box">Geospatial Analysis: Red zones indicate areas where enrollment density is low relative to child population.</div>', unsafe_allow_html=True)
 
@@ -182,7 +171,20 @@ else:
             p_top = dist_final.sort_values('priority_score', ascending=False).head(20)
             p_top['label'] = p_top['district'] + " (" + p_top['state'] + ")"
             fig_p = px.bar(p_top, x='priority_score', y='label', orientation='h', color='priority_score', color_continuous_scale='Reds')
-            fig_p.update_layout(height=700, yaxis={'categoryorder':'total ascending'}, font=dict(size=16))
+            
+            # --- UPDATED: LARGE BLACK FONT FOR DISTRICTS ---
+            fig_p.update_layout(
+                height=800, 
+                yaxis={
+                    'categoryorder':'total ascending', 
+                    'tickfont': {'size': 18, 'color': 'black', 'family': 'Arial Black'}
+                },
+                xaxis={
+                    'tickfont': {'size': 16, 'color': 'black'},
+                    'title': {'text': 'Priority Score', 'font': {'size': 18, 'color': 'black'}}
+                },
+                margin=dict(l=250) # More space for district names
+            )
             st.plotly_chart(fig_p, use_container_width=True)
         else: 
             st.info("No priority data available for the current selection.")
@@ -191,15 +193,33 @@ else:
         st.header("Registration Timeline")
         trend = df_final.groupby('date').agg({'age_0_5':'sum', 'age_5_17':'sum'}).reset_index()
         fig_trend = go.Figure()
-        fig_trend.add_trace(go.Scatter(x=trend['date'], y=trend['age_0_5'], name='Age 0-5', line=dict(color='#7b1fa2', width=3)))
-        fig_trend.add_trace(go.Scatter(x=trend['date'], y=trend['age_5_17'], name='Age 5-17', line=dict(color='#ce93d8', width=3)))
-        fig_trend.update_layout(title="Daily Enrollment Trends (Filtered Range)", hovermode='x unified')
+        fig_trend.add_trace(go.Scatter(x=trend['date'], y=trend['age_0_5'], name='Age 0-5', line=dict(color='#7b1fa2', width=4)))
+        fig_trend.add_trace(go.Scatter(x=trend['date'], y=trend['age_5_17'], name='Age 5-17', line=dict(color='#ce93d8', width=4)))
+        
+        # --- UPDATED: LARGE BLACK FONT FOR TREND AXIS ---
+        fig_trend.update_layout(
+            title="Daily Enrollment Trends (Filtered Range)", 
+            hovermode='x unified',
+            xaxis={
+                'tickfont': {'size': 16, 'color': 'black', 'family': 'Arial'},
+                'title': {'text': 'Timeline', 'font': {'size': 18, 'color': 'black'}}
+            },
+            yaxis={
+                'tickfont': {'size': 16, 'color': 'black', 'family': 'Arial'},
+                'title': {'text': 'Enrollment Count', 'font': {'size': 18, 'color': 'black'}}
+            },
+            legend=dict(font=dict(size=16, color="black"))
+        )
         st.plotly_chart(fig_trend, use_container_width=True)
 
     elif menu == "💫 Performance Matrix":
         st.header("District Saturation Analysis")
         if not dist_final.empty:
             fig_mat = px.scatter(dist_final, x='pincodes', y='children', size='total', color='priority_score', hover_name='district', color_continuous_scale='RdYlGn_r', size_max=40)
+            fig_mat.update_layout(
+                xaxis={'tickfont': {'size': 14, 'color': 'black'}, 'title': {'font': {'color': 'black', 'size': 16}}},
+                yaxis={'tickfont': {'size': 14, 'color': 'black'}, 'title': {'font': {'color': 'black', 'size': 16}}}
+            )
             st.plotly_chart(fig_mat, use_container_width=True)
 
 st.markdown("---")
