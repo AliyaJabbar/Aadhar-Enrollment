@@ -182,7 +182,7 @@ else:
             p_top = dist_final.sort_values('priority_score', ascending=False).head(20)
             p_top['label'] = p_top['district'] + " (" + p_top['state'] + ")"
             fig_p = px.bar(p_top, x='priority_score', y='label', orientation='h', color='priority_score', color_continuous_scale='Reds')
-            fig_p.update_layout(height=700, yaxis={'categoryorder':'total ascending'}, font=dict(size=14))
+            fig_p.update_layout(height=700, yaxis={'categoryorder':'total ascending'}, font=dict(size=16))
             st.plotly_chart(fig_p, use_container_width=True)
         else: 
             st.info("No priority data available for the current selection.")
