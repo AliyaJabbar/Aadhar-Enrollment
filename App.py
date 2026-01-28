@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(
     page_title="Aadhaar Enrollment Gap Analysis Dashboard", 
     layout="wide", 
-    page_icon="🎯",
+    page_icon="",
     initial_sidebar_state="expanded"
 )
 CHART_FONT_SIZE = 16
@@ -22,7 +22,7 @@ st.markdown("""
         border: 1px solid #d1c4e9;
         border-left: 6px solid #7b1fa2; 
         color: #2c003e;
-        font-weight: 500;
+        font-weight: 700;
         margin-top: 15px;
         box-shadow: 2px 2px 10px rgba(0,0,0,0.02);
     }
@@ -76,7 +76,7 @@ df_clean, district_summary = load_and_clean_data()
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title("📌 Dashboard Menu")
+    st.title(" Dashboard Menu")
     menu = st.radio("Switch View:", ["📋 Executive Summary", "🗺️ National Heatmap", "🚨 Priority Districts", "📈 Enrollment Trends", "💫 Performance Matrix"])
     st.markdown("---")
     st.subheader("Global Filters")
