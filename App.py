@@ -131,14 +131,34 @@ else:
             fig_pie.update_layout(title="Enrollment by Demographic")
             st.plotly_chart(fig_pie, use_container_width=True)
             st.markdown('<div class="insight-box">Demographic Insight: Children and teenagers represent the largest volume of new registrations in the filtered dataset.</div>', unsafe_allow_html=True)
-        with c2:
+       with c2:
             top_states = df_final.groupby('state')['children_enrollment'].sum().nlargest(10).reset_index()
-            # UPDATED: Descending order by using 'total ascending' on y-axis for horizontal bars
-            fig_bar = px.bar(top_states, x='children_enrollment', y='state', orientation='h', title="Leading States (Child Enrollment)", color='children_enrollment', color_continuous_scale='Purples')
-            fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}) 
+            
+            fig_bar = px.bar(
+                top_states, 
+                x='children_enrollment', 
+                y='state', 
+                orientation='h', 
+                title="Leading States (Child Enrollment)", 
+                color='children_enrollment', 
+                color_continuous_scale='Purples'
+            )
+            
+            # --- UPDATED SECTION FOR FONT SIZE & READABILITY ---
+            fig_bar.update_layout(
+                yaxis={
+                    'categoryorder': 'total ascending',
+                    'tickfont': {'size': 18, 'color': 'black', 'family': 'Arial Black'} # Bold, large font for states
+                },
+                xaxis={
+                    'tickfont': {'size': 14, 'color': 'black'} # Larger numbers on bottom axis
+                },
+                margin=dict(l=150), # Adds extra space on the left so long state names fit perfectly
+                title_font={'size': 22} # Makes the chart title stand out in the video
+            )
+            
             st.plotly_chart(fig_bar, use_container_width=True)
             st.markdown('<div class="insight-box">Operational Focus: Top states indicate high demand; resources should be scaled to match these volumes.</div>', unsafe_allow_html=True)
-
     elif menu == "🗺️ National Heatmap":
         st.header("National Enrollment Density")
         map_df = df_final.groupby('state_for_map')['children_enrollment'].sum().reset_index()
