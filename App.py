@@ -131,6 +131,7 @@ else:
             fig_pie.update_layout(title="Enrollment by Demographic")
             st.plotly_chart(fig_pie, use_container_width=True)
             st.markdown('<div class="insight-box">Demographic Insight: Children and teenagers represent the largest volume of new registrations in the filtered dataset.</div>', unsafe_allow_html=True)
+            
        with c2:
             top_states = df_final.groupby('state')['children_enrollment'].sum().nlargest(10).reset_index()
             
