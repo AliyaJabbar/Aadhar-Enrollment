@@ -149,7 +149,7 @@ else:
             fig_bar.update_layout(
                 yaxis={
                     'categoryorder': 'total ascending',
-                    'tickfont': {'size': 18, 'color': 'black', 'family': 'Arial Black'}
+                    'tickfont': {'size': 16, 'color': 'black', 'family': 'Arial Black'}
                 },
                 xaxis={'tickfont': {'size': 14, 'color': 'black'}},
                 margin=dict(l=150),
