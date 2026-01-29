@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(
     page_title="Aadhaar Enrollment Gap Analysis Dashboard", 
     layout="wide", 
-    page_icon="🎯",
+    page_icon="",
     initial_sidebar_state="expanded"
 )
 
@@ -76,7 +76,7 @@ df_clean, district_summary = load_and_clean_data()
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title("📌 Dashboard Menu")
+    st.title(" Dashboard Menu")
     menu = st.radio("Switch View:", ["📋 Executive Summary", "🗺️ National Heatmap", "🚨 Priority Districts", "📈 Enrollment Trends", "💫 Performance Matrix"])
     st.markdown("---")
     st.subheader("Global Filters")
@@ -140,7 +140,7 @@ else:
             fig_bar = px.bar(top_states, x='children_enrollment', y='state', orientation='h', title="Leading States (Child Enrollment)", color='children_enrollment', color_continuous_scale='Purples')
             fig_bar.update_layout(
                 yaxis={'categoryorder': 'total ascending', 'tickfont': {'size': 18, 'color': 'black', 'family': 'Arial Black'}},
-                xaxis={'tickfont': {'size': 14, 'color': 'black'}},
+                xaxis={'tickfont': {'size': 12, 'color': 'black'}},
                 margin=dict(l=150),
                 title_font={'size': 22}
             )
